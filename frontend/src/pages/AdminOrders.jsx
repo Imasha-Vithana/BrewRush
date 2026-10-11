@@ -1,9 +1,15 @@
-
 import { useEffect, useState } from "react";
-import { RefreshCw, PackageCheck, Coffee } from "lucide-react";
+import {
+  RefreshCw,
+  PackageCheck,
+  Coffee,
+  LogOut,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../context/CartContext";
 
 const API_URL = "http://localhost:8080/api/orders";
+const AUTH_KEY = "brewrushAdminAuth";
 
 const ORDER_STATUSES = [
   { value: "PLACED", label: "Placed" },
@@ -13,6 +19,8 @@ const ORDER_STATUSES = [
 ];
 
 function AdminOrders() {
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,15 +28,47 @@ function AdminOrders() {
   const [statusError, setStatusError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
+  function getAuthHeader() {
+    const savedAuth = sessionStorage.getItem(AUTH_KEY);
+
+    if (!savedAuth) {
+      navigate("/admin/login", { replace: true });
+      return null;
+    }
+
+    return {
+      Authorization: `Basic ${savedAuth}`,
+    };
+  }
+
   async function fetchOrders(signal) {
+    const authHeaders = getAuthHeader();
+
+    if (!authHeaders) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(API_URL, { signal });
+      const response = await fetch(API_URL, {
+        method: "GET",
+        headers: authHeaders,
+        signal,
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        sessionStorage.removeItem(AUTH_KEY);
+        navigate("/admin/login", { replace: true });
+        return;
+      }
 
       if (!response.ok) {
-        throw new Error(`Failed to load orders (${response.status}).`);
+        throw new Error(
+          `Failed to load orders (${response.status}).`
+        );
       }
 
       const data = await response.json();
@@ -41,7 +81,9 @@ function AdminOrders() {
     } catch (err) {
       if (err.name !== "AbortError") {
         console.error("Orders loading error:", err);
-        setError("Unable to load orders. Check that the backend is running.");
+        setError(
+          "Unable to load orders. Check the backend connection and try again."
+        );
       }
     } finally {
       if (!signal?.aborted) {
@@ -51,6 +93,10 @@ function AdminOrders() {
   }
 
   async function updateOrderStatus(orderId, status) {
+    const authHeaders = getAuthHeader();
+
+    if (!authHeaders) return;
+
     setUpdatingOrderId(orderId);
     setStatusError("");
     setStatusMessage("");
@@ -61,20 +107,30 @@ function AdminOrders() {
         {
           method: "PATCH",
           headers: {
+            ...authHeaders,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ status }),
         }
       );
 
-      const contentType = response.headers.get("content-type") || "";
+      if (response.status === 401 || response.status === 403) {
+        sessionStorage.removeItem(AUTH_KEY);
+        navigate("/admin/login", { replace: true });
+        return;
+      }
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
       const result = contentType.includes("application/json")
         ? await response.json()
         : { error: await response.text() };
 
       if (!response.ok) {
         throw new Error(
-          result.error || `Status update failed (${response.status}).`
+          result.error ||
+            `Status update failed (${response.status}).`
         );
       }
 
@@ -84,19 +140,29 @@ function AdminOrders() {
         )
       );
 
-      setStatusMessage(`Order status updated to ${status.replaceAll("_", " ")}.`);
+      setStatusMessage(
+        `Order status updated to ${status.replaceAll("_", " ")}.`
+      );
     } catch (err) {
       console.error("Status update failed:", err);
+
       setStatusError(
-        err.message || "Unable to update order status. Please try again."
+        err.message ||
+          "Unable to update order status. Please try again."
       );
     } finally {
       setUpdatingOrderId(null);
     }
   }
 
+  function handleLogout() {
+    sessionStorage.removeItem(AUTH_KEY);
+    navigate("/admin/login", { replace: true });
+  }
+
   useEffect(() => {
     const controller = new AbortController();
+
     fetchOrders(controller.signal);
 
     return () => controller.abort();
@@ -110,7 +176,7 @@ function AdminOrders() {
   return (
     <main className="min-h-screen bg-[#F3E9DC] px-5 py-12 text-[#24150F] sm:px-8">
       <div className="mx-auto max-w-7xl">
-        {/* Page heading */}
+        {/* Page Heading */}
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#A66A3F]">
@@ -126,18 +192,29 @@ function AdminOrders() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fetchOrders()}
-            disabled={loading}
-            className="flex w-fit items-center gap-2 rounded-full bg-[#24150F] px-5 py-3 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226] disabled:opacity-60"
-          >
-            <RefreshCw size={16} />
-            Refresh Orders
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fetchOrders()}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-full bg-[#24150F] px-5 py-3 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226] disabled:opacity-60"
+            >
+              <RefreshCw size={16} />
+              Refresh Orders
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-full border border-[#D8C7B5] bg-[#FAF7F2] px-5 py-3 text-sm font-semibold text-[#5A3828] transition hover:bg-[#E8D8C5]"
+            >
+              <LogOut size={16} />
+              Log Out
+            </button>
+          </div>
         </div>
 
-        {/* Status messages */}
+        {/* Status Messages */}
         {statusError && (
           <p
             role="alert"
@@ -156,11 +233,14 @@ function AdminOrders() {
           </p>
         )}
 
-        {/* Summary cards */}
+        {/* Summary Cards */}
         {!loading && !error && (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-[#D8C7B5] bg-[#FAF7F2] p-6">
-              <p className="text-sm text-[#806A5A]">Total Orders</p>
+              <p className="text-sm text-[#806A5A]">
+                Total Orders
+              </p>
+
               <p className="mt-2 text-3xl font-semibold">
                 {orders.length}
               </p>
@@ -170,6 +250,7 @@ function AdminOrders() {
               <p className="text-sm text-[#806A5A]">
                 Combined Order Value
               </p>
+
               <p className="mt-2 text-3xl font-semibold">
                 {formatPrice(totalRevenue)}
               </p>
@@ -184,7 +265,15 @@ function AdminOrders() {
           </p>
         ) : error ? (
           <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-            {error}
+            <p>{error}</p>
+
+            <button
+              type="button"
+              onClick={() => fetchOrders()}
+              className="mt-4 rounded-full bg-[#24150F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6B4226]"
+            >
+              Try Again
+            </button>
           </div>
         ) : orders.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-[#D8C7B5] bg-[#FAF7F2] p-10 text-center">
@@ -192,7 +281,9 @@ function AdminOrders() {
               className="mx-auto text-[#A66A3F]"
               size={32}
             />
+
             <p className="mt-4 font-semibold">No orders yet</p>
+
             <p className="mt-2 text-sm text-[#806A5A]">
               New customer orders will appear here.
             </p>
@@ -204,7 +295,7 @@ function AdminOrders() {
                 key={order.id}
                 className="overflow-hidden rounded-3xl border border-[#D8C7B5] bg-[#FAF7F2]"
               >
-                {/* Order header and status dropdown */}
+                {/* Order Header and Status */}
                 <div className="flex flex-col justify-between gap-4 bg-[#24150F] px-6 py-5 text-[#F3E9DC] sm:flex-row sm:items-center">
                   <div>
                     <p className="text-xs text-[#CDB8A3]">
@@ -234,7 +325,10 @@ function AdminOrders() {
                       id={`status-${order.id}`}
                       value={order.status || "PLACED"}
                       onChange={(event) =>
-                        updateOrderStatus(order.id, event.target.value)
+                        updateOrderStatus(
+                          order.id,
+                          event.target.value
+                        )
                       }
                       disabled={updatingOrderId === order.id}
                       className="w-full max-w-[230px] rounded-full border border-white/20 bg-[#24150F] px-4 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#D9B68C] disabled:cursor-wait disabled:opacity-60"
@@ -258,10 +352,12 @@ function AdminOrders() {
                   </div>
                 </div>
 
-                {/* Customer details and items */}
+                {/* Customer Details and Items */}
                 <div className="grid gap-6 p-6 lg:grid-cols-2">
                   <section>
-                    <h3 className="font-semibold">Customer Details</h3>
+                    <h3 className="font-semibold">
+                      Customer Details
+                    </h3>
 
                     <p className="mt-3 text-sm">
                       {[order.firstName, order.lastName]
@@ -279,7 +375,9 @@ function AdminOrders() {
                   </section>
 
                   <section>
-                    <h3 className="font-semibold">Ordered Coffees</h3>
+                    <h3 className="font-semibold">
+                      Ordered Coffees
+                    </h3>
 
                     <div className="mt-3 space-y-3">
                       {(order.items || []).map((item, index) => (
@@ -316,17 +414,27 @@ function AdminOrders() {
                   </section>
                 </div>
 
-                {/* Order totals */}
+                {/* Order Totals */}
                 <div className="border-t border-[#D8C7B5] px-6 py-5">
                   <div className="ml-auto max-w-sm space-y-2 text-sm">
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#806A5A]">Subtotal</span>
-                      <span>{formatPrice(order.subtotal)}</span>
+                      <span className="text-[#806A5A]">
+                        Subtotal
+                      </span>
+
+                      <span>
+                        {formatPrice(order.subtotal)}
+                      </span>
                     </div>
 
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#806A5A]">Delivery Fee</span>
-                      <span>{formatPrice(order.deliveryFee)}</span>
+                      <span className="text-[#806A5A]">
+                        Delivery Fee
+                      </span>
+
+                      <span>
+                        {formatPrice(order.deliveryFee)}
+                      </span>
                     </div>
 
                     <div className="flex justify-between gap-4 border-t border-[#D8C7B5] pt-3 text-base font-semibold">
@@ -342,6 +450,10 @@ function AdminOrders() {
       </div>
     </main>
   );
+}
+
+function cartCountText(count) {
+  return `${count} ${count === 1 ? "item" : "items"} in your bag`;
 }
 
 export default AdminOrders;

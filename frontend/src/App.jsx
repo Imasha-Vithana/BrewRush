@@ -1,6 +1,6 @@
-
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import FeaturedCoffee from "./components/FeaturedCoffee";
@@ -10,9 +10,12 @@ import AboutBrewRush from "./components/AboutBrewRush";
 import Reviews from "./components/Reviews";
 import FinalCTA from "./components/FinalCTA";
 import Footer from "./components/Footer";
+
 import Checkout from "./pages/Checkout";
+import AdminLogin from "./pages/AdminLogin";
 import AdminOrders from "./pages/AdminOrders";
 import OrderTracking from "./pages/OrderTracking";
+
 import { CartProvider } from "./context/CartContext";
 
 function HomePage({ searchQuery, setSearchQuery }) {
@@ -21,10 +24,12 @@ function HomePage({ searchQuery, setSearchQuery }) {
       <Hero />
       <FeaturedCoffee />
       <WhyBrewRush />
+
       <MenuSection
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
+
       <AboutBrewRush />
       <Reviews />
       <FinalCTA />
@@ -61,6 +66,13 @@ function App() {
               element={<Checkout />}
             />
 
+            {/* Admin Login */}
+            <Route
+              path="/admin/login"
+              element={<AdminLogin />}
+            />
+
+            {/* Admin Orders */}
             <Route
               path="/admin/orders"
               element={<AdminOrders />}

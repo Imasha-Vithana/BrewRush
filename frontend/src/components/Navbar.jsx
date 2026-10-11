@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Coffee,
@@ -10,16 +9,23 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import Cart from "./Cart";
+import { useNavigate } from "react-router-dom";
 
 function Navbar({ searchQuery, setSearchQuery }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
+  const navigate = useNavigate();
   const { cartCount } = useCart();
 
   const closeMenu = () => {
     setMenuOpen(false);
+  };
+
+  const goToAdminLogin = () => {
+    closeMenu();
+    navigate("/admin/login");
   };
 
   const scrollToSection = (sectionId) => {
@@ -125,12 +131,10 @@ function Navbar({ searchQuery, setSearchQuery }) {
               </span>
             </button>
 
-            {/* Login */}
+            {/* Desktop Login */}
             <button
               type="button"
-              onClick={() => {
-                // Login functionality can be connected later.
-              }}
+              onClick={goToAdminLogin}
               className="hidden items-center gap-2 rounded-full bg-[#24150F] px-5 py-2.5 text-xs font-semibold text-[#F3E9DC] transition-all hover:bg-[#6B4226] sm:flex"
             >
               <UserRound size={15} />
@@ -222,6 +226,16 @@ function Navbar({ searchQuery, setSearchQuery }) {
               >
                 Track Order
               </a>
+
+              {/* Mobile Login */}
+              <button
+                type="button"
+                onClick={goToAdminLogin}
+                className="mt-2 flex items-center gap-2 rounded-xl bg-[#24150F] px-4 py-3 text-left text-sm font-semibold text-[#F3E9DC] transition-colors hover:bg-[#6B4226]"
+              >
+                <UserRound size={16} />
+                Admin Login
+              </button>
             </nav>
           </div>
         )}
