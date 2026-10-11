@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -10,6 +11,8 @@ import Reviews from "./components/Reviews";
 import FinalCTA from "./components/FinalCTA";
 import Footer from "./components/Footer";
 import Checkout from "./pages/Checkout";
+import AdminOrders from "./pages/AdminOrders";
+import OrderTracking from "./pages/OrderTracking";
 import { CartProvider } from "./context/CartContext";
 
 function HomePage({ searchQuery, setSearchQuery }) {
@@ -56,6 +59,16 @@ function App() {
             <Route
               path="/checkout"
               element={<Checkout />}
+            />
+
+            <Route
+              path="/admin/orders"
+              element={<AdminOrders />}
+            />
+
+            <Route
+              path="/track-order"
+              element={<OrderTracking />}
             />
           </Routes>
         </div>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Check,
@@ -6,13 +7,18 @@ import {
   Clock3,
   PackageCheck,
 } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { Link } from "react-router-dom";
+import { useCart, formatPrice } from "../context/CartContext";
+
+const API_URL = "http://localhost:8080/api/orders";
 
 function Checkout() {
   const { cartItems, cartTotal, clearCart } = useCart();
 
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [customer, setCustomer] = useState({
     fullName: "",
@@ -20,28 +26,93 @@ function Checkout() {
     address: "",
   });
 
-  const deliveryFee = cartItems.length > 0 ? 2.5 : 0;
+  const deliveryFee = cartItems.length > 0 ? 250 : 0;
   const grandTotal = cartTotal + deliveryFee;
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0 || isSubmitting) {
       return;
     }
 
-    const newOrder = {
-      orderNumber: `BR-${Date.now().toString().slice(-6)}`,
-      customer: { ...customer },
-      items: cartItems.map((item) => ({ ...item })),
-      subtotal: cartTotal,
-      deliveryFee,
-      total: grandTotal,
-    };
+    setIsSubmitting(true);
+    setSubmitError("");
 
-    setConfirmedOrder(newOrder);
-    setOrderPlaced(true);
-    clearCart();
+    try {
+      const nameParts = customer.fullName.trim().split(/\s+/);
+      const firstName = nameParts.shift() || "";
+      const lastName = nameParts.join(" ");
+
+      const orderPayload = {
+        firstName,
+        lastName,
+        phone: customer.phone.trim(),
+        address: customer.address.trim(),
+        items: cartItems.map((item) => ({
+          productId: String(item.id ?? item._id ?? ""),
+          quantity: Number(item.quantity),
+        })),
+      };
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      const result = contentType.includes("application/json")
+        ? await response.json()
+        : { error: await response.text() };
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || `Unable to place order (${response.status}).`
+        );
+      }
+
+      if (!result.id) {
+        throw new Error(
+          "The server response did not include an order ID."
+        );
+      }
+
+      const savedOrder = {
+        orderNumber: `BR-${String(result.id).slice(-6).toUpperCase()}`,
+        customer: {
+          fullName: [result.firstName, result.lastName]
+            .filter(Boolean)
+            .join(" "),
+          phone: result.phone || customer.phone,
+          address: result.address || customer.address,
+        },
+        items: (result.items || []).map((item) => ({
+          ...item,
+          id: item.productId || item.id,
+        })),
+        subtotal: Number(result.subtotal || 0),
+        deliveryFee: Number(result.deliveryFee || 0),
+        total: Number(result.total || 0),
+        status: result.status || "PLACED",
+      };
+
+      setConfirmedOrder(savedOrder);
+      setOrderPlaced(true);
+      clearCart();
+    } catch (error) {
+      console.error("Order submission failed:", error);
+
+      setSubmitError(
+        error.message ||
+          "Unable to place your order. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // Order confirmation page
@@ -77,8 +148,7 @@ function Checkout() {
             </h1>
 
             <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-[#806A5A]">
-              Your coffee moment is one step closer. Here is a
-              summary of your order.
+              Your order has been saved. Here is your order confirmation.
             </p>
           </div>
 
@@ -97,7 +167,7 @@ function Checkout() {
 
               <div className="flex w-fit items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs">
                 <span className="h-2 w-2 rounded-full bg-[#D9B68C]" />
-                Demo order submitted
+                {confirmedOrder.status}
               </div>
             </div>
 
@@ -129,7 +199,7 @@ function Checkout() {
               <div className="mt-5 space-y-4">
                 {confirmedOrder.items.map((item) => (
                   <div
-                    key={item.name}
+                    key={item.id}
                     className="flex items-center justify-between gap-4 border-b border-[#E8D8C5] pb-4"
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -146,8 +216,10 @@ function Checkout() {
                       </div>
                     </div>
 
-                    <p className="shrink-0 text-sm font-semibold">
-                      ${(item.price * item.quantity).toFixed(2)}
+                    <p className="shrink-0 text-right text-sm font-semibold">
+                      {formatPrice(
+                        Number(item.price || 0) * item.quantity
+                      )}
                     </p>
                   </div>
                 ))}
@@ -155,25 +227,21 @@ function Checkout() {
 
               {/* Price summary */}
               <div className="mt-6 space-y-3">
-                <div className="flex justify-between text-sm text-[#806A5A]">
+                <div className="flex justify-between gap-4 text-sm text-[#806A5A]">
                   <span>Subtotal</span>
-                  <span>
-                    ${confirmedOrder.subtotal.toFixed(2)}
-                  </span>
+                  <span>{formatPrice(confirmedOrder.subtotal)}</span>
                 </div>
 
-                <div className="flex justify-between text-sm text-[#806A5A]">
+                <div className="flex justify-between gap-4 text-sm text-[#806A5A]">
                   <span>Delivery fee</span>
-                  <span>
-                    ${confirmedOrder.deliveryFee.toFixed(2)}
-                  </span>
+                  <span>{formatPrice(confirmedOrder.deliveryFee)}</span>
                 </div>
 
-                <div className="flex justify-between border-t border-[#D8C7B5] pt-5">
+                <div className="flex justify-between gap-4 border-t border-[#D8C7B5] pt-5">
                   <span className="font-semibold">Order total</span>
 
-                  <span className="text-2xl font-semibold">
-                    ${confirmedOrder.total.toFixed(2)}
+                  <span className="text-xl font-semibold sm:text-2xl">
+                    {formatPrice(confirmedOrder.total)}
                   </span>
                 </div>
               </div>
@@ -195,7 +263,7 @@ function Checkout() {
                 <p className="mt-3 text-sm font-semibold">Received</p>
 
                 <p className="mt-1 text-xs leading-5 text-[#806A5A]">
-                  Order submitted
+                  Order saved
                 </p>
               </div>
 
@@ -209,7 +277,7 @@ function Checkout() {
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-[#806A5A]">
-                  Coffee preparation
+                  Awaiting preparation
                 </p>
               </div>
 
@@ -221,7 +289,7 @@ function Checkout() {
                 <p className="mt-3 text-sm font-semibold">Delivery</p>
 
                 <p className="mt-1 text-xs leading-5 text-[#806A5A]">
-                  On its way
+                  Awaiting dispatch
                 </p>
               </div>
             </div>
@@ -233,26 +301,36 @@ function Checkout() {
               />
 
               <p className="text-xs leading-6 text-[#806A5A]">
-                This is a confirmation preview. Live preparation
-                and delivery updates will be available when order
-                tracking is connected.
+                You can check your latest order status using the
+                Track My Order button below.
               </p>
             </div>
           </div>
 
           {/* Navigation buttons */}
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <Link
+              to="/track-order"
+              state={{
+                reference: confirmedOrder.orderNumber,
+                phone: confirmedOrder.customer.phone,
+              }}
+              className="flex items-center justify-center gap-2 rounded-full bg-[#24150F] px-5 py-4 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226]"
+            >
+              Track My Order
+              <ArrowRight size={17} />
+            </Link>
+
             <a
               href="/#full-menu"
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#24150F] px-6 py-4 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226]"
+              className="flex items-center justify-center gap-2 rounded-full border border-[#CDB8A3] px-5 py-4 text-sm font-semibold text-[#3A2117] transition hover:bg-[#F3E9DC]"
             >
               Continue Shopping
-              <ArrowRight size={17} />
             </a>
 
             <a
               href="/"
-              className="flex flex-1 items-center justify-center rounded-full border border-[#CDB8A3] px-6 py-4 text-sm font-semibold text-[#3A2117] transition hover:bg-[#F3E9DC]"
+              className="flex items-center justify-center rounded-full border border-[#CDB8A3] px-5 py-4 text-sm font-semibold text-[#3A2117] transition hover:bg-[#F3E9DC]"
             >
               Back to Home
             </a>
@@ -291,10 +369,7 @@ function Checkout() {
             </h2>
 
             <div>
-              <label
-                htmlFor="fullName"
-                className="mb-2 block text-sm"
-              >
+              <label htmlFor="fullName" className="mb-2 block text-sm">
                 Full Name
               </label>
 
@@ -317,10 +392,7 @@ function Checkout() {
             </div>
 
             <div>
-              <label
-                htmlFor="phone"
-                className="mb-2 block text-sm"
-              >
+              <label htmlFor="phone" className="mb-2 block text-sm">
                 Phone Number
               </label>
 
@@ -343,10 +415,7 @@ function Checkout() {
             </div>
 
             <div>
-              <label
-                htmlFor="address"
-                className="mb-2 block text-sm"
-              >
+              <label htmlFor="address" className="mb-2 block text-sm">
                 Delivery Address
               </label>
 
@@ -368,12 +437,21 @@ function Checkout() {
               />
             </div>
 
+            {submitError && (
+              <p
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+              >
+                {submitError}
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={cartItems.length === 0}
+              disabled={cartItems.length === 0 || isSubmitting}
               className="w-full rounded-full bg-[#24150F] py-3.5 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Place Order
+              {isSubmitting ? "Placing Order..." : "Place Order"}
             </button>
 
             {cartItems.length === 0 && (
@@ -397,40 +475,40 @@ function Checkout() {
                 <div className="mt-5 space-y-4">
                   {cartItems.map((item) => (
                     <div
-                      key={item.name}
+                      key={item.id}
                       className="flex justify-between gap-4 border-b border-[#D8C7B5] pb-4"
                     >
                       <div>
                         <p className="font-medium">{item.name}</p>
 
                         <p className="mt-1 text-sm text-[#806A5A]">
-                          ${item.price.toFixed(2)} × {item.quantity}
+                          {formatPrice(item.price)} × {item.quantity}
                         </p>
                       </div>
 
-                      <p className="font-semibold">
-                        ${(item.price * item.quantity).toFixed(2)}
+                      <p className="text-right font-semibold">
+                        {formatPrice(
+                          Number(item.price || 0) * item.quantity
+                        )}
                       </p>
                     </div>
                   ))}
                 </div>
 
                 <div className="mt-6 space-y-3 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-4">
                     <span className="text-[#806A5A]">Subtotal</span>
-                    <span>${cartTotal.toFixed(2)}</span>
+                    <span>{formatPrice(cartTotal)}</span>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-[#806A5A]">
-                      Delivery fee
-                    </span>
-                    <span>${deliveryFee.toFixed(2)}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#806A5A]">Delivery fee</span>
+                    <span>{formatPrice(deliveryFee)}</span>
                   </div>
 
-                  <div className="flex justify-between border-t border-[#D8C7B5] pt-4 text-lg font-semibold">
+                  <div className="flex justify-between gap-4 border-t border-[#D8C7B5] pt-4 text-lg font-semibold">
                     <span>Total</span>
-                    <span>${grandTotal.toFixed(2)}</span>
+                    <span>{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
               </>
