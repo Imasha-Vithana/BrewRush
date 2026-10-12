@@ -4,14 +4,14 @@ import {
   Search,
   ShoppingBag,
   Menu,
-  UserRound,
   X,
+  ArrowRight,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import Cart from "./Cart";
 import { useNavigate } from "react-router-dom";
 
-function Navbar({ searchQuery, setSearchQuery }) {
+function Navbar({ searchQuery = "", setSearchQuery }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -23,13 +23,9 @@ function Navbar({ searchQuery, setSearchQuery }) {
     setMenuOpen(false);
   };
 
-  const goToAdminLogin = () => {
-    closeMenu();
-    navigate("/admin/login");
-  };
-
   const scrollToSection = (sectionId) => {
     closeMenu();
+    setSearchOpen(false);
 
     if (window.location.pathname !== "/") {
       window.location.href = `/#${sectionId}`;
@@ -38,8 +34,40 @@ function Navbar({ searchQuery, setSearchQuery }) {
 
     document.getElementById(sectionId)?.scrollIntoView({
       behavior: "smooth",
+      block: "start",
     });
   };
+
+  const goToTrackOrder = () => {
+    closeMenu();
+    navigate("/track-order");
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === "Enter") {
+      scrollToSection("full-menu");
+    }
+
+    if (event.key === "Escape") {
+      setSearchOpen(false);
+    }
+  };
+
+  const toggleSearch = () => {
+    setSearchOpen((previous) => !previous);
+    setMenuOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setMenuOpen((previous) => !previous);
+    setSearchOpen(false);
+  };
+
+  const navLinkClass =
+    "text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]";
+
+  const mobileLinkClass =
+    "rounded-xl px-4 py-3 text-left text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]";
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#D8C7B5] bg-[#F3E9DC]/95 text-[#24150F] backdrop-blur-md">
@@ -49,9 +77,10 @@ function Navbar({ searchQuery, setSearchQuery }) {
           <a
             href="/"
             onClick={closeMenu}
-            className="flex items-center gap-3"
+            aria-label="BrewRush home"
+            className="group flex shrink-0 items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#24150F] text-[#F3E9DC]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#24150F] text-[#F3E9DC] transition-transform duration-300 group-hover:rotate-[-8deg]">
               <Coffee size={19} />
             </div>
 
@@ -67,85 +96,85 @@ function Navbar({ searchQuery, setSearchQuery }) {
           </a>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-6 lg:gap-8 md:flex">
-            <a
-              href="/"
-              className="text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]"
-            >
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-5 md:flex lg:gap-7"
+          >
+            <a href="/#home" className={navLinkClass}>
               Home
             </a>
 
-            <a
-              href="/#menu"
-              className="text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]"
-            >
+            <a href="/#menu" className={navLinkClass}>
               Featured
             </a>
 
-            <a
-              href="/#full-menu"
-              className="text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]"
-            >
+            <a href="/#full-menu" className={navLinkClass}>
               Menu
             </a>
 
-            <a
-              href="/#about"
-              className="text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]"
-            >
+            <a href="/#about" className={navLinkClass}>
               Our Story
             </a>
 
-            <a
-              href="/track-order"
-              className="text-sm font-medium text-[#5A3828] transition-colors hover:text-[#A66A3F]"
+            <a href="/#reviews" className={navLinkClass}>
+              Reviews
+            </a>
+
+            <button
+              type="button"
+              onClick={goToTrackOrder}
+              className={navLinkClass}
             >
               Track Order
-            </a>
+            </button>
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Search */}
             <button
               type="button"
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-all hover:bg-[#E8D8C5] hover:text-[#A66A3F]"
-              aria-label="Search"
+              onClick={toggleSearch}
+              aria-label={searchOpen ? "Close search" : "Open search"}
               aria-expanded={searchOpen}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#A66A3F]"
             >
-              <Search size={18} />
+              {searchOpen ? <X size={18} /> : <Search size={18} />}
             </button>
 
             {/* Shopping Bag */}
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-all hover:bg-[#E8D8C5] hover:text-[#A66A3F]"
               aria-label={`Shopping bag, ${cartCount} items`}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#A66A3F]"
             >
               <ShoppingBag size={18} />
 
-              <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#A66A3F] text-[9px] font-bold text-white">
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#A66A3F] px-1 text-[9px] font-bold text-white">
                 {cartCount}
               </span>
             </button>
 
-            {/* Desktop Login */}
+            {/* Desktop Order Now */}
             <button
               type="button"
-              onClick={goToAdminLogin}
-              className="hidden items-center gap-2 rounded-full bg-[#24150F] px-5 py-2.5 text-xs font-semibold text-[#F3E9DC] transition-all hover:bg-[#6B4226] sm:flex"
+              onClick={() => scrollToSection("full-menu")}
+              className="group hidden items-center gap-2 rounded-full bg-[#24150F] px-4 py-2.5 text-xs font-semibold text-[#F3E9DC] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#6B4226] hover:shadow-md md:inline-flex lg:px-5"
             >
-              <UserRound size={15} />
-              Login
+              Order Now
+
+              <ArrowRight
+                size={15}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
             </button>
 
             {/* Mobile Menu Button */}
             <button
               type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-all hover:bg-[#E8D8C5] md:hidden"
+              onClick={toggleMenu}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#5A3828] transition-colors hover:bg-[#E8D8C5] md:hidden"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
             >
@@ -164,21 +193,21 @@ function Navbar({ searchQuery, setSearchQuery }) {
               />
 
               <input
-                type="text"
-                placeholder="Search coffee..."
+                type="search"
+                placeholder="Search your coffee..."
                 autoFocus
                 value={searchQuery}
                 onChange={(event) =>
-                  setSearchQuery(event.target.value)
+                  setSearchQuery?.(event.target.value)
                 }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    setSearchOpen(false);
-                    scrollToSection("full-menu");
-                  }
-                }}
-                className="w-full rounded-full border border-[#D8C7B5] bg-[#FAF7F2] py-3 pl-11 pr-4 text-sm text-[#24150F] outline-none placeholder:text-[#806A5A] focus:border-[#A66A3F]"
+                onKeyDown={handleSearchKeyDown}
+                aria-label="Search coffee menu"
+                className="w-full rounded-full border border-[#D8C7B5] bg-[#FAF7F2] py-3 pl-11 pr-4 text-sm text-[#24150F] outline-none placeholder:text-[#806A5A] focus:border-[#A66A3F] focus:ring-2 focus:ring-[#A66A3F]/10"
               />
+
+              <p className="mt-2 pl-4 text-xs text-[#806A5A]">
+                Type a coffee name and press Enter to view the menu.
+              </p>
             </div>
           </div>
         )}
@@ -186,19 +215,22 @@ function Navbar({ searchQuery, setSearchQuery }) {
         {/* Mobile Navigation */}
         {menuOpen && (
           <div className="border-t border-[#D8C7B5] py-5 md:hidden">
-            <nav className="flex flex-col gap-1">
-              <a
-                href="/"
-                onClick={closeMenu}
-                className="rounded-xl px-4 py-3 text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]"
+            <nav
+              aria-label="Mobile navigation"
+              className="flex flex-col gap-1"
+            >
+              <button
+                type="button"
+                onClick={() => scrollToSection("home")}
+                className={mobileLinkClass}
               >
                 Home
-              </a>
+              </button>
 
               <button
                 type="button"
                 onClick={() => scrollToSection("menu")}
-                className="rounded-xl px-4 py-3 text-left text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]"
+                className={mobileLinkClass}
               >
                 Featured Coffee
               </button>
@@ -206,7 +238,7 @@ function Navbar({ searchQuery, setSearchQuery }) {
               <button
                 type="button"
                 onClick={() => scrollToSection("full-menu")}
-                className="rounded-xl px-4 py-3 text-left text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]"
+                className={mobileLinkClass}
               >
                 Full Menu
               </button>
@@ -214,27 +246,39 @@ function Navbar({ searchQuery, setSearchQuery }) {
               <button
                 type="button"
                 onClick={() => scrollToSection("about")}
-                className="rounded-xl px-4 py-3 text-left text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]"
+                className={mobileLinkClass}
               >
                 Our Story
               </button>
 
-              <a
-                href="/track-order"
-                onClick={closeMenu}
-                className="rounded-xl px-4 py-3 text-sm font-medium text-[#5A3828] transition-colors hover:bg-[#E8D8C5] hover:text-[#24150F]"
-              >
-                Track Order
-              </a>
-
-              {/* Mobile Login */}
               <button
                 type="button"
-                onClick={goToAdminLogin}
-                className="mt-2 flex items-center gap-2 rounded-xl bg-[#24150F] px-4 py-3 text-left text-sm font-semibold text-[#F3E9DC] transition-colors hover:bg-[#6B4226]"
+                onClick={() => scrollToSection("reviews")}
+                className={mobileLinkClass}
               >
-                <UserRound size={16} />
-                Admin Login
+                Customer Reviews
+              </button>
+
+              <button
+                type="button"
+                onClick={goToTrackOrder}
+                className={mobileLinkClass}
+              >
+                Track Order
+              </button>
+
+              {/* Mobile Order Now */}
+              <button
+                type="button"
+                onClick={() => scrollToSection("full-menu")}
+                className="group mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[#24150F] px-5 py-3.5 text-sm font-semibold text-[#F3E9DC] transition-colors hover:bg-[#6B4226]"
+              >
+                Order Now
+
+                <ArrowRight
+                  size={16}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
               </button>
             </nav>
           </div>

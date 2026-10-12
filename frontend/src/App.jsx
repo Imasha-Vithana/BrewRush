@@ -21,8 +21,17 @@ import { CartProvider } from "./context/CartContext";
 function HomePage({ searchQuery, setSearchQuery }) {
   return (
     <>
+      {/* Navbar is displayed on the Home page only */}
+      <Navbar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+
+      {/* Main Home sections */}
       <Hero />
+
       <FeaturedCoffee />
+
       <WhyBrewRush />
 
       <MenuSection
@@ -31,8 +40,11 @@ function HomePage({ searchQuery, setSearchQuery }) {
       />
 
       <AboutBrewRush />
+
       <Reviews />
+
       <FinalCTA />
+
       <Footer />
     </>
   );
@@ -45,12 +57,8 @@ function App() {
     <CartProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-[#F3E9DC]">
-          <Navbar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-          />
-
           <Routes>
+            {/* Customer Home */}
             <Route
               path="/"
               element={
@@ -61,6 +69,7 @@ function App() {
               }
             />
 
+            {/* Checkout */}
             <Route
               path="/checkout"
               element={<Checkout />}
@@ -72,12 +81,13 @@ function App() {
               element={<AdminLogin />}
             />
 
-            {/* Admin Orders */}
+            {/* Admin Order Management */}
             <Route
               path="/admin/orders"
               element={<AdminOrders />}
             />
 
+            {/* Customer Order Tracking */}
             <Route
               path="/track-order"
               element={<OrderTracking />}

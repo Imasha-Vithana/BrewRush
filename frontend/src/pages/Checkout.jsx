@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Check,
@@ -10,7 +9,51 @@ import {
 import { Link } from "react-router-dom";
 import { useCart, formatPrice } from "../context/CartContext";
 
-const API_URL = "http://localhost:8080/api/orders";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/orders`;
+
+// Each coffee is connected to its own local image.
+const COFFEE_IMAGES = {
+  cappuccino: "/images/cappuccino.jpg",
+  "caramel macchiato": "/images/caramel-macchiato.jpg",
+  "cold brew": "/images/cold-brew.jpg",
+  "iced mocha": "/images/iced-mocha.jpg",
+  "velvet latte": "/images/velvet-latte.jpg",
+};
+
+function getCoffeeImage(item) {
+  if (item.imageSrc) {
+    return item.imageSrc;
+  }
+
+  const productName = (item.name || "").trim().toLowerCase();
+
+  return COFFEE_IMAGES[productName] || "";
+}
+
+function CoffeeProductImage({ item, className = "" }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = getCoffeeImage(item);
+
+  return (
+    <div
+      className={`relative shrink-0 overflow-hidden rounded-xl bg-[#E8D8C5] ${className}`}
+    >
+      {imageSrc && !imageFailed ? (
+        <img
+          src={imageSrc}
+          alt={item.name || "Coffee"}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[#6B4226]">
+          <Coffee size={24} strokeWidth={1.4} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Checkout() {
   const { cartItems, cartTotal, clearCart } = useCart();
@@ -83,6 +126,7 @@ function Checkout() {
 
       const savedOrder = {
         orderNumber: `BR-${String(result.id).slice(-6).toUpperCase()}`,
+
         customer: {
           fullName: [result.firstName, result.lastName]
             .filter(Boolean)
@@ -90,10 +134,19 @@ function Checkout() {
           phone: result.phone || customer.phone,
           address: result.address || customer.address,
         },
-        items: (result.items || []).map((item) => ({
-          ...item,
-          id: item.productId || item.id,
-        })),
+
+        items: (result.items || []).map((item) => {
+          const savedItem = {
+            ...item,
+            id: item.productId || item.id || item.name,
+          };
+
+          return {
+            ...savedItem,
+            imageSrc: getCoffeeImage(savedItem),
+          };
+        }),
+
         subtotal: Number(result.subtotal || 0),
         deliveryFee: Number(result.deliveryFee || 0),
         total: Number(result.total || 0),
@@ -107,21 +160,23 @@ function Checkout() {
       console.error("Order submission failed:", error);
 
       setSubmitError(
-        error.message ||
-          "Unable to place your order. Please try again."
+        error.message || "Unable to place your order. Please try again."
       );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Order confirmation page
+  // ORDER CONFIRMATION PAGE
   if (orderPlaced && confirmedOrder) {
     return (
       <section className="min-h-screen bg-[#FAF7F2] px-5 py-14 text-[#24150F]">
         <div className="mx-auto max-w-3xl">
           {/* Brand */}
-          <a href="/" className="flex items-center justify-center gap-3">
+          <a
+            href="/"
+            className="flex items-center justify-center gap-3"
+          >
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#24150F] text-[#F3E9DC]">
               <Coffee size={21} />
             </div>
@@ -197,28 +252,36 @@ function Checkout() {
               </h2>
 
               <div className="mt-5 space-y-4">
-                {confirmedOrder.items.map((item) => (
+                {confirmedOrder.items.map((item, index) => (
                   <div
-                    key={item.id}
+                    key={item.id ?? item.name ?? index}
                     className="flex items-center justify-between gap-4 border-b border-[#E8D8C5] pb-4"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F3E9DC] text-[#6B4226]">
-                        <Coffee size={21} />
-                      </div>
+                      <CoffeeProductImage
+                        item={item}
+                        className="h-16 w-16"
+                      />
 
-                      <div>
-                        <p className="font-medium">{item.name}</p>
+                      <div className="min-w-0">
+                        <p className="break-words font-medium">
+                          {item.name || "Coffee"}
+                        </p>
 
                         <p className="mt-1 text-xs text-[#806A5A]">
                           Quantity: {item.quantity}
+                        </p>
+
+                        <p className="mt-1 text-xs text-[#806A5A]">
+                          {formatPrice(Number(item.price || 0))} each
                         </p>
                       </div>
                     </div>
 
                     <p className="shrink-0 text-right text-sm font-semibold">
                       {formatPrice(
-                        Number(item.price || 0) * item.quantity
+                        Number(item.price || 0) *
+                          Number(item.quantity || 0)
                       )}
                     </p>
                   </div>
@@ -272,9 +335,7 @@ function Checkout() {
                   <Coffee size={18} />
                 </div>
 
-                <p className="mt-3 text-sm font-semibold">
-                  Preparing
-                </p>
+                <p className="mt-3 text-sm font-semibold">Preparing</p>
 
                 <p className="mt-1 text-xs leading-5 text-[#806A5A]">
                   Awaiting preparation
@@ -301,8 +362,8 @@ function Checkout() {
               />
 
               <p className="text-xs leading-6 text-[#806A5A]">
-                You can check your latest order status using the
-                Track My Order button below.
+                Check your latest order status using the Track My Order
+                button below.
               </p>
             </div>
           </div>
@@ -344,7 +405,7 @@ function Checkout() {
     );
   }
 
-  // Checkout page
+  // CHECKOUT PAGE
   return (
     <section className="min-h-screen bg-[#F3E9DC] px-6 py-16 text-[#24150F] lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -364,12 +425,13 @@ function Checkout() {
             onSubmit={handleSubmit}
             className="space-y-5 rounded-2xl border border-[#D8C7B5] bg-[#FAF7F2] p-6"
           >
-            <h2 className="text-xl font-semibold">
-              Delivery Details
-            </h2>
+            <h2 className="text-xl font-semibold">Delivery Details</h2>
 
             <div>
-              <label htmlFor="fullName" className="mb-2 block text-sm">
+              <label
+                htmlFor="fullName"
+                className="mb-2 block text-sm"
+              >
                 Full Name
               </label>
 
@@ -467,34 +529,44 @@ function Checkout() {
 
             {cartItems.length === 0 ? (
               <p className="mt-5 text-sm text-[#806A5A]">
-                Your cart is empty. Please add coffee from the
-                menu first.
+                Your cart is empty. Please add coffee from the menu first.
               </p>
             ) : (
               <>
                 <div className="mt-5 space-y-4">
                   {cartItems.map((item) => (
                     <div
-                      key={item.id}
-                      className="flex justify-between gap-4 border-b border-[#D8C7B5] pb-4"
+                      key={item.id ?? item._id ?? item.name}
+                      className="flex items-center justify-between gap-4 border-b border-[#D8C7B5] pb-4"
                     >
-                      <div>
-                        <p className="font-medium">{item.name}</p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <CoffeeProductImage
+                          item={item}
+                          className="h-16 w-16"
+                        />
 
-                        <p className="mt-1 text-sm text-[#806A5A]">
-                          {formatPrice(item.price)} × {item.quantity}
-                        </p>
+                        <div className="min-w-0">
+                          <p className="break-words font-medium">
+                            {item.name}
+                          </p>
+
+                          <p className="mt-1 text-sm text-[#806A5A]">
+                            {formatPrice(item.price)} × {item.quantity}
+                          </p>
+                        </div>
                       </div>
 
-                      <p className="text-right font-semibold">
+                      <p className="shrink-0 text-right font-semibold">
                         {formatPrice(
-                          Number(item.price || 0) * item.quantity
+                          Number(item.price || 0) *
+                            Number(item.quantity || 0)
                         )}
                       </p>
                     </div>
                   ))}
                 </div>
 
+                {/* Price summary */}
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-[#806A5A]">Subtotal</span>

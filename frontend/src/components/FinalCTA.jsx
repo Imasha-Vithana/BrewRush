@@ -14,10 +14,9 @@ function FinalCTA() {
       <div className="pointer-events-none absolute right-20 top-16 h-32 w-32 rounded-full bg-[#A66A3F]/10 blur-3xl" />
 
       <div className="relative mx-auto max-w-4xl text-center">
-
-        {/* Icon */}
+        {/* Coffee icon */}
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#8B624A] bg-[#24150F] text-[#C8A98D]">
-          <Coffee size={24} />
+          <Coffee size={24} strokeWidth={1.5} />
         </div>
 
         {/* Label */}
@@ -40,18 +39,21 @@ function FinalCTA() {
           bring a fresh cup straight to your door.
         </p>
 
-        {/* CTA */}
-        <button className="group mx-auto mt-9 flex items-center gap-3 rounded-full bg-[#F3E9DC] px-7 py-4 text-sm font-semibold text-[#24150F] transition-all duration-300 hover:bg-white hover:shadow-xl">
+        {/* Working CTA button */}
+        <a
+          href="#full-menu"
+          className="group mx-auto mt-9 inline-flex items-center gap-3 rounded-full bg-[#F3E9DC] px-7 py-4 text-sm font-semibold text-[#24150F] transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8A98D] focus-visible:ring-offset-4 focus-visible:ring-offset-[#3A2117]"
+        >
           Order your coffee
 
           <ArrowRight
             size={18}
             className="transition-transform duration-300 group-hover:translate-x-1"
           />
-        </button>
+        </a>
 
         {/* Bottom note */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-[#8F786A]">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-[#B9A294]">
           <span>Freshly prepared</span>
 
           <span className="h-1 w-1 rounded-full bg-[#A66A3F]" />
@@ -68,4 +70,3 @@ function FinalCTA() {
 }
 
 export default FinalCTA;
-

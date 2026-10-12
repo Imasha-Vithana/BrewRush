@@ -1,6 +1,59 @@
-import { Minus, Plus, Trash2, X, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  X,
+  ShoppingBag,
+  Coffee,
+} from "lucide-react";
 import { useCart, formatPrice } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
+
+// Each coffee name is connected to its own local image.
+const COFFEE_IMAGES = {
+  cappuccino: "/images/cappuccino.jpg",
+  "caramel macchiato": "/images/caramel-macchiato.jpg",
+  "cold brew": "/images/cold-brew.jpg",
+  "iced mocha": "/images/iced-mocha.jpg",
+  "velvet latte": "/images/velvet-latte.jpg",
+};
+
+function getCoffeeImage(item) {
+  // Use the specific image passed in from the menu if available.
+  if (item.imageSrc) {
+    return item.imageSrc;
+  }
+
+  // Otherwise, find the image using the product name.
+  const productName = (item.name || "").trim().toLowerCase();
+
+  return COFFEE_IMAGES[productName] || "";
+}
+
+// Displays a product image with a graceful fallback.
+function CartItemImage({ item }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = getCoffeeImage(item);
+
+  return (
+    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#E8D8C5]">
+      {imageSrc && !imageFailed ? (
+        <img
+          src={imageSrc}
+          alt={item.name}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[#6B4226]">
+          <Coffee size={30} strokeWidth={1.4} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Cart({ isOpen, onClose }) {
   const {
@@ -12,11 +65,17 @@ function Cart({ isOpen, onClose }) {
 
   const navigate = useNavigate();
 
+  const handleCheckout = () => {
+    onClose();
+    navigate("/checkout");
+  };
+
   return (
     <>
       {/* Overlay */}
       {isOpen && (
         <div
+          aria-hidden="true"
           onClick={onClose}
           className="fixed inset-0 z-[60] bg-[#24150F]/40 backdrop-blur-sm"
         />
@@ -24,6 +83,10 @@ function Cart({ isOpen, onClose }) {
 
       {/* Cart Drawer */}
       <aside
+        role="dialog"
+        aria-modal={isOpen ? "true" : undefined}
+        aria-label="Shopping bag"
+        aria-hidden={!isOpen}
         className={`fixed right-0 top-0 z-[70] flex h-full w-full max-w-lg flex-col bg-[#FAF7F2] shadow-2xl transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
@@ -55,7 +118,7 @@ function Cart({ isOpen, onClose }) {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-6">
           {cartItems.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E7D4BC] text-[#6B4226]">
@@ -81,22 +144,14 @@ function Cart({ isOpen, onClose }) {
           ) : (
             <div className="space-y-5">
               {cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="w-full rounded-2xl border border-[#D8C7B5] bg-white/60 p-5"
+                <article
+                  key={item.id ?? item._id ?? item.name}
+                  className="rounded-2xl border border-[#D8C7B5] bg-white/60 p-4 sm:p-5"
                 >
-                  {/* Product Image and Details */}
+                  {/* Product image and details */}
                   <div className="flex gap-4">
-                    {/* Coffee Visual */}
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-[#E8D8C5]">
-                      <div className="relative h-12 w-10 rounded-b-xl rounded-t-md bg-[#6B4226]">
-                        <div className="absolute left-1/2 top-1 h-2 w-7 -translate-x-1/2 rounded-full bg-[#24150F]" />
+                    <CartItemImage item={item} />
 
-                        <div className="absolute -right-3 top-3 h-6 w-4 rounded-r-full border-[3px] border-[#6B4226]" />
-                      </div>
-                    </div>
-
-                    {/* Product Details */}
                     <div className="min-w-0 flex-1">
                       <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[#A66A3F]">
                         {item.category || "Coffee"}
@@ -110,8 +165,8 @@ function Cart({ isOpen, onClose }) {
                         {formatPrice(item.price)} each
                       </p>
 
-                      {/* Quantity and Item Total */}
-                      <div className="mt-4 flex items-center justify-between gap-3">
+                      {/* Quantity controls and line total */}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center rounded-full border border-[#D8C7B5] bg-[#FAF7F2]">
                           <button
                             type="button"
@@ -157,7 +212,7 @@ function Cart({ isOpen, onClose }) {
                     </div>
                   </div>
 
-                  {/* Remove Section */}
+                  {/* Remove item */}
                   <div className="mt-4 border-t border-[#E8D8C5] pt-3">
                     <button
                       type="button"
@@ -169,7 +224,7 @@ function Cart({ isOpen, onClose }) {
                       Remove item
                     </button>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
@@ -194,10 +249,7 @@ function Cart({ isOpen, onClose }) {
 
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                navigate("/checkout");
-              }}
+              onClick={handleCheckout}
               className="mt-5 flex w-full items-center justify-center rounded-full bg-[#24150F] py-3.5 text-sm font-semibold text-[#F3E9DC] transition hover:bg-[#6B4226]"
             >
               Proceed to Checkout

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -10,7 +9,15 @@ import {
 } from "lucide-react";
 import { formatPrice } from "../context/CartContext";
 
-const API_URL = "http://localhost:8080/api/orders";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/orders`;
+// Match each coffee to its own local image.
+const COFFEE_IMAGES = {
+  cappuccino: "/images/cappuccino.jpg",
+  "caramel macchiato": "/images/caramel-macchiato.jpg",
+  "cold brew": "/images/cold-brew.jpg",
+  "iced mocha": "/images/iced-mocha.jpg",
+  "velvet latte": "/images/velvet-latte.jpg",
+};
 
 const statusLabels = {
   PLACED: "Order Placed",
@@ -19,10 +26,44 @@ const statusLabels = {
   DELIVERED: "Delivered",
 };
 
+function getCoffeeImage(item) {
+  if (item.imageSrc) {
+    return item.imageSrc;
+  }
+
+  const productName = (item.name || "").trim().toLowerCase();
+
+  return COFFEE_IMAGES[productName] || "";
+}
+
+// Displays the correct local image for each ordered coffee.
+function CoffeeProductImage({ item }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = getCoffeeImage(item);
+
+  return (
+    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#E8D8C5]">
+      {imageSrc && !imageFailed ? (
+        <img
+          src={imageSrc}
+          alt={item.name || "Coffee"}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[#6B4226]">
+          <Coffee size={24} strokeWidth={1.4} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OrderTracking() {
   const location = useLocation();
 
-  // Prefill information received from the Checkout confirmation page.
+  // Prefill information from checkout confirmation.
   const [reference, setReference] = useState(
     () => location.state?.reference || ""
   );
@@ -52,7 +93,11 @@ function OrderTracking() {
         `${API_URL}/${encodeURIComponent(cleanReference)}/track?phone=${encodeURIComponent(cleanPhone)}`
       );
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+
+      const data = contentType.includes("application/json")
+        ? await response.json()
+        : { error: await response.text() };
 
       if (!response.ok) {
         throw new Error(
@@ -65,15 +110,14 @@ function OrderTracking() {
       console.error("Order tracking error:", err);
 
       setError(
-        err.message ||
-          "Unable to track your order. Please try again."
+        err.message || "Unable to track your order. Please try again."
       );
     } finally {
       setLoading(false);
     }
   }
 
-  // Automatically refresh the order status every 10 seconds.
+  // Refresh the latest order status every 10 seconds.
   useEffect(() => {
     if (!order?.id || !reference.trim() || !phone.trim()) {
       return;
@@ -88,14 +132,10 @@ function OrderTracking() {
 
         const response = await fetch(
           `${API_URL}/${encodeURIComponent(cleanReference)}/track?phone=${encodeURIComponent(cleanPhone)}`,
-          {
-            signal: controller.signal,
-          }
+          { signal: controller.signal }
         );
 
-        if (!response.ok) {
-          return;
-        }
+        if (!response.ok) return;
 
         const latestOrder = await response.json();
 
@@ -234,6 +274,7 @@ function OrderTracking() {
             aria-live="polite"
             className="mt-8 overflow-hidden rounded-3xl border border-[#D8C7B5] bg-[#FAF7F2]"
           >
+            {/* Current status */}
             <div className="bg-[#24150F] p-6 text-[#F3E9DC] sm:p-8">
               <p className="text-xs text-[#CDB8A3]">
                 Order Reference
@@ -302,7 +343,7 @@ function OrderTracking() {
                 </div>
               </div>
 
-              {/* Ordered coffees */}
+              {/* Ordered coffee items */}
               <div className="mt-7 border-t border-[#D8C7B5] pt-6">
                 <h3 className="font-semibold">Your Coffee</h3>
 
@@ -310,21 +351,22 @@ function OrderTracking() {
                   {(order.items || []).map((item, index) => (
                     <div
                       key={`${item.productId || item.name}-${index}`}
-                      className="flex items-center justify-between gap-4"
+                      className="flex items-center justify-between gap-4 border-b border-[#E8D8C5] pb-4"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <Coffee
-                          size={19}
-                          className="shrink-0 text-[#6B4226]"
-                        />
+                        <CoffeeProductImage item={item} />
 
-                        <div>
-                          <p className="text-sm font-medium">
-                            {item.name}
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium">
+                            {item.name || "Coffee"}
                           </p>
 
                           <p className="mt-1 text-xs text-[#806A5A]">
                             Quantity: {item.quantity}
+                          </p>
+
+                          <p className="mt-1 text-xs text-[#806A5A]">
+                            {formatPrice(Number(item.price || 0))} each
                           </p>
                         </div>
                       </div>
@@ -374,6 +416,7 @@ function OrderTracking() {
           </section>
         )}
 
+        {/* Back navigation */}
         <Link
           to="/"
           className="mx-auto mt-8 flex w-fit items-center gap-2 text-sm font-medium text-[#6B4226] transition hover:text-[#A66A3F]"

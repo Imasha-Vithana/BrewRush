@@ -1,5 +1,4 @@
-
-import { Coffee, Clock3, Leaf, Sparkles } from "lucide-react";
+import { Coffee, Clock3, Leaf, Sparkles, ArrowRight } from "lucide-react";
 
 const reasons = [
   {
@@ -14,14 +13,14 @@ const reasons = [
     number: "02",
     title: "Fresh to your door",
     description:
-      "Your coffee is prepared when you order, so it reaches you fresh, warm, and ready to enjoy.",
+      "Your coffee is prepared when you order, so it can be enjoyed fresh, warm, and full of flavour.",
   },
   {
     icon: Leaf,
     number: "03",
     title: "Quality ingredients",
     description:
-      "We keep our recipes simple and focus on ingredients that make every sip taste better.",
+      "Simple recipes and thoughtfully selected ingredients help make every coffee moment more enjoyable.",
   },
   {
     icon: Sparkles,
@@ -41,11 +40,11 @@ function WhyBrewRush() {
       {/* Background details */}
       <div className="pointer-events-none absolute -right-40 top-20 h-80 w-80 rounded-full bg-[#6B4226]/20 blur-3xl" />
 
-      <div className="mx-auto max-w-7xl">
+      <div className="pointer-events-none absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-[#A66A3F]/10 blur-3xl" />
 
-        {/* Heading */}
-        <div className="grid gap-12 lg:grid-cols-12 lg:items-end">
-
+      <div className="relative mx-auto max-w-7xl">
+        {/* Section heading */}
+        <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <div className="mb-5 flex items-center gap-3">
               <span className="h-px w-9 bg-[#A66A3F]" />
@@ -74,16 +73,15 @@ function WhyBrewRush() {
         </div>
 
         {/* Main content */}
-        <div className="mt-20 grid gap-14 lg:grid-cols-12">
-
+        <div className="mt-16 grid gap-12 lg:mt-20 lg:grid-cols-12 lg:gap-14">
           {/* Brand statement */}
           <div className="lg:col-span-4">
-            <div className="sticky top-28">
+            <div className="lg:sticky lg:top-28">
               <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#6B4226] bg-[#3A2117] text-[#C8A98D]">
-                <Coffee size={23} />
+                <Coffee size={23} strokeWidth={1.4} />
               </div>
 
-              <h3 className="mt-7 max-w-sm text-2xl font-medium leading-tight text-[#F3E9DC]">
+              <h3 className="mt-7 max-w-sm text-2xl font-medium leading-tight text-[#F3E9DC] sm:text-3xl">
                 Coffee made with intention,
                 <span className="text-[#9D8373]">
                   {" "}
@@ -91,52 +89,68 @@ function WhyBrewRush() {
                 </span>
               </h3>
 
-              <p className="mt-5 max-w-sm text-sm leading-6 text-[#9D8373]">
+              <p className="mt-5 max-w-sm text-sm leading-7 text-[#9D8373]">
                 We believe delivery should never mean compromising on the
                 experience of a good coffee.
               </p>
 
-              {/* Small stats */}
-              <div className="mt-10 grid grid-cols-2 border-t border-[#4A3024] pt-6">
-                <div>
-                  <p className="text-2xl font-semibold text-[#F3E9DC]">
-                    4.9
+              {/* Brand values instead of unverified statistics */}
+              <div className="mt-9 grid grid-cols-2 border-t border-[#4A3024] pt-6">
+                <div className="pr-4">
+                  <p className="text-lg font-semibold text-[#F3E9DC]">
+                    Made fresh
                   </p>
-                  <p className="mt-1 text-xs text-[#8F786A]">
-                    Customer rating
+
+                  <p className="mt-2 text-xs leading-5 text-[#8F786A]">
+                    Prepared when you order
                   </p>
                 </div>
 
-                <div>
-                  <p className="text-2xl font-semibold text-[#F3E9DC]">
-                    30m
+                <div className="border-l border-[#4A3024] pl-5">
+                  <p className="text-lg font-semibold text-[#F3E9DC]">
+                    With care
                   </p>
-                  <p className="mt-1 text-xs text-[#8F786A]">
-                    Average delivery
+
+                  <p className="mt-2 text-xs leading-5 text-[#8F786A]">
+                    Every cup, every moment
                   </p>
                 </div>
               </div>
+
+              {/* Menu link */}
+              <a
+                href="#full-menu"
+                className="group mt-8 inline-flex items-center gap-3 text-sm font-semibold text-[#C8A98D] transition-colors hover:text-[#F3E9DC]"
+              >
+                Explore our coffee menu
+
+                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#5A3B2C] transition-all duration-300 group-hover:border-[#C8A98D] group-hover:bg-[#C8A98D] group-hover:text-[#24150F]">
+                  <ArrowRight
+                    size={16}
+                    className="transition-transform duration-300 group-hover:translate-x-1"
+                  />
+                </span>
+              </a>
             </div>
           </div>
 
-          {/* Reasons */}
+          {/* Four reasons */}
           <div className="lg:col-span-8">
             <div className="grid border-t border-[#4A3024] md:grid-cols-2">
-
               {reasons.map((reason) => {
                 const Icon = reason.icon;
 
                 return (
                   <article
                     key={reason.number}
-                    className="group border-b border-[#4A3024] py-8 md:pr-8 md:odd:border-r md:odd:pr-10 md:even:pl-10"
+                    className="group border-b border-[#4A3024] py-8 transition-colors duration-300 hover:bg-[#2B1912]/60 md:px-6 md:odd:border-r md:odd:pl-0 md:even:pr-0 lg:py-9"
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#5A3B2C] text-[#C8A98D] transition-all duration-300 group-hover:border-[#A66A3F] group-hover:bg-[#A66A3F] group-hover:text-[#24150F]">
-                        <Icon size={18} />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#5A3B2C] text-[#C8A98D] transition-all duration-300 group-hover:border-[#C8A98D] group-hover:bg-[#C8A98D] group-hover:text-[#24150F]">
+                        <Icon size={19} strokeWidth={1.5} />
                       </div>
 
-                      <span className="text-xs tracking-[0.2em] text-[#685247]">
+                      <span className="text-xs tracking-[0.2em] text-[#806A5A] transition-colors group-hover:text-[#C8A98D]">
                         {reason.number}
                       </span>
                     </div>
@@ -145,20 +159,19 @@ function WhyBrewRush() {
                       {reason.title}
                     </h3>
 
-                    <p className="mt-3 max-w-sm text-sm leading-6 text-[#9D8373]">
+                    <p className="mt-3 max-w-sm text-sm leading-7 text-[#9D8373]">
                       {reason.description}
                     </p>
                   </article>
                 );
               })}
-
             </div>
           </div>
         </div>
 
         {/* Bottom statement */}
-        <div className="mt-20 flex flex-col gap-4 border-y border-[#4A3024] py-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-[#8F786A]">
+        <div className="mt-16 flex flex-col gap-4 border-y border-[#4A3024] py-7 sm:mt-20 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-6 text-[#9D8373]">
             Good coffee. Thoughtfully made. Delivered your way.
           </p>
 
@@ -173,4 +186,3 @@ function WhyBrewRush() {
 }
 
 export default WhyBrewRush;
-

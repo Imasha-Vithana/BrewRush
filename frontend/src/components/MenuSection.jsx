@@ -1,49 +1,18 @@
-
 import { Search, SlidersHorizontal, Plus, ArrowUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 
-const API_URL = "http://localhost:8080/api/products";
-
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/products`;
 const categories = ["All", "Hot Coffee", "Cold Coffee", "Blended"];
 
-function CoffeeImage({ tone = "cream" }) {
-  const cupColors = {
-    latte: "bg-[#FAF7F2]",
-    cream: "bg-[#E7D4BC]",
-    caramel: "bg-[#A66A3F]",
-    dark: "bg-[#3A2117]",
-    mocha: "bg-[#6B4226]",
-    vanilla: "bg-[#F0E1CE]",
-  };
-
-  const cupColor = cupColors[tone] || cupColors.cream;
-
-  return (
-    <div className="relative flex h-64 items-center justify-center overflow-hidden bg-[#E8D8C5]">
-      <div className="absolute h-44 w-44 rounded-full bg-[#D2B79B]" />
-
-      <div
-        className={`relative z-10 h-32 w-24 rounded-b-[1.8rem] rounded-t-lg shadow-xl ${cupColor}`}
-      >
-        <div className="absolute left-1/2 top-2 h-4 w-[4.5rem] -translate-x-1/2 rounded-full bg-[#24150F]" />
-        <div className="absolute left-4 top-9 h-12 w-1.5 rounded-full bg-white/20" />
-
-        <div
-          className={`absolute -right-7 top-7 h-14 w-10 rounded-r-full border-[7px] ${cupColor}`}
-        />
-
-        <span className="absolute bottom-5 left-1/2 -translate-x-1/2 text-[6px] font-bold tracking-[0.18em] text-[#6B4226]">
-          BREWRUSH
-        </span>
-      </div>
-
-      <div className="absolute bottom-10 h-5 w-36 rounded-full bg-[#24150F]/20 blur-md" />
-      <span className="absolute left-8 top-10 h-5 w-3 rotate-[-25deg] rounded-full bg-[#3A2117]" />
-      <span className="absolute bottom-9 right-10 h-5 w-3 rotate-[30deg] rounded-full bg-[#24150F]" />
-    </div>
-  );
-}
+// Local coffee images inside frontend/public/images/
+const LOCAL_COFFEE_IMAGES = {
+  cappuccino: "/images/cappuccino.jpg",
+  "caramel macchiato": "/images/caramel-macchiato.jpg",
+  "cold brew": "/images/cold-brew.jpg",
+  "iced mocha": "/images/iced-mocha.jpg",
+  "velvet latte": "/images/velvet-latte.jpg",
+};
 
 function MenuSection({ searchQuery = "", setSearchQuery }) {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -90,6 +59,9 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
             return true;
           })
           .map((product) => {
+            const productName = (product.name || "Coffee").trim();
+            const normalizedName = productName.toLowerCase();
+
             const categoryName = (
               product.category || "Hot Coffee"
             ).toLowerCase();
@@ -108,30 +80,24 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
               category = "Blended";
             }
 
-            const tones = {
-              "Cold Coffee": "dark",
-              Blended: "vanilla",
-              "Hot Coffee": "cream",
-            };
-
             return {
               ...product,
               id: product.id ?? product._id ?? product.name,
-              name: product.name || "Coffee",
+              name: productName,
               description:
                 product.description || "Freshly prepared coffee.",
               price: Number(product.price) || 0,
               category,
               tag: product.tag || "Fresh",
-              tone: product.tone || tones[category],
+              imageSrc: LOCAL_COFFEE_IMAGES[normalizedName] || "",
             };
           });
 
         setMenuItems(formattedProducts);
-        console.log("Products loaded:", formattedProducts);
       } catch (err) {
         if (err.name !== "AbortError") {
           console.error("Product loading error:", err);
+
           setError(
             "Unable to load coffees. Please check your backend connection and try again."
           );
@@ -162,11 +128,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
     return matchesCategory && matchesSearch;
   });
 
-  // Debugging: check why Add to Cart may not be working.
   const handleAddToCart = (item) => {
-    console.log("Add to cart clicked:", item);
-    console.log("addToCart function:", addToCart);
-
     if (typeof addToCart !== "function") {
       console.error("Cart error: addToCart is not available.");
       return;
@@ -174,7 +136,6 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
 
     try {
       addToCart(item);
-      console.log("Add to cart function called successfully.");
     } catch (err) {
       console.error("Add to cart failed:", err);
     }
@@ -191,10 +152,12 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
       className="bg-[#F3E9DC] px-6 py-24 text-[#24150F] lg:px-8"
     >
       <div className="mx-auto max-w-7xl">
+        {/* Menu heading and search */}
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <div className="mb-5 flex items-center gap-3">
               <span className="h-px w-9 bg-[#A66A3F]" />
+
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#806A5A]">
                 Our menu
               </p>
@@ -203,6 +166,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
             <h2 className="text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">
               Find something
               <br />
+
               <span className="font-serif italic text-[#6B4226]">
                 worth sipping.
               </span>
@@ -232,6 +196,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
           </div>
         </div>
 
+        {/* Category filters */}
         <div className="mt-12 flex flex-col gap-4 border-y border-[#D8C7B5] py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm text-[#806A5A]">
             <SlidersHorizontal size={16} />
@@ -256,13 +221,16 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
           </div>
         </div>
 
+        {/* Loading state */}
         {loading ? (
           <p className="mt-10 py-16 text-center text-sm text-[#806A5A]">
             Loading coffees...
           </p>
         ) : error ? (
+          /* Error state */
           <div className="mt-10 py-16 text-center">
             <p className="text-sm text-red-800">{error}</p>
+
             <button
               type="button"
               onClick={() => window.location.reload()}
@@ -273,6 +241,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
           </div>
         ) : (
           <>
+            {/* Results count */}
             <div className="mt-10 flex items-center justify-between">
               <p className="text-sm text-[#806A5A]">
                 Showing{" "}
@@ -287,27 +256,46 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
               </p>
             </div>
 
+            {/* Coffee cards */}
             <div className="mt-6 grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
               {filteredItems.map((item) => (
                 <article
                   key={item.id || item._id || item.name}
                   className="group overflow-hidden rounded-[1.75rem] border border-[#D8C7B5] bg-[#FAF7F2] transition-all duration-300 hover:-translate-y-1 hover:border-[#BFA997] hover:shadow-xl"
                 >
+                  {/* Real coffee photo only — no illustrated cup overlay */}
                   <div className="relative">
-                    <div className="relative">
-                      <CoffeeImage tone={item.tone} />
-
-                      {item.imageUrl && (
+                    <div className="relative h-64 overflow-hidden bg-[#E8D8C5]">
+                      {item.imageSrc ? (
                         <img
-                          src={item.imageUrl}
+                          src={item.imageSrc}
                           alt={item.name}
                           loading="lazy"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+
+                            const fallback =
+                              event.currentTarget.parentElement?.querySelector(
+                                "[data-image-fallback]"
+                              );
+
+                            fallback?.classList.remove("hidden");
                           }}
                         />
-                      )}
+                      ) : null}
+
+                      {/* Fallback if the local photo is missing */}
+                      <div
+                        data-image-fallback
+                        className={`${
+                          item.imageSrc ? "hidden" : ""
+                        } absolute inset-0 flex items-center justify-center bg-[#E8D8C5] px-6 text-center`}
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#806A5A]">
+                          {item.name}
+                        </span>
+                      </div>
                     </div>
 
                     <span className="absolute left-5 top-5 rounded-full bg-[#FAF7F2]/85 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6B4226] backdrop-blur-md">
@@ -323,6 +311,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
                     </button>
                   </div>
 
+                  {/* Coffee details */}
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -360,6 +349,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
               ))}
             </div>
 
+            {/* No results */}
             {filteredItems.length === 0 && (
               <div className="py-24 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E7D4BC] text-[#6B4226]">
@@ -386,6 +376,7 @@ function MenuSection({ searchQuery = "", setSearchQuery }) {
           </>
         )}
 
+        {/* Menu footer */}
         <div className="mt-14 border-t border-[#D8C7B5] pt-6">
           <div className="flex flex-col gap-3 text-xs text-[#806A5A] sm:flex-row sm:items-center sm:justify-between">
             <span>

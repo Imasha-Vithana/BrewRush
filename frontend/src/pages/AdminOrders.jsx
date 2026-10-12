@@ -8,8 +8,17 @@ import {
 import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../context/CartContext";
 
-const API_URL = "http://localhost:8080/api/orders";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/orders`;
 const AUTH_KEY = "brewrushAdminAuth";
+
+// Match each coffee name to its local image.
+const COFFEE_IMAGES = {
+  cappuccino: "/images/cappuccino.jpg",
+  "caramel macchiato": "/images/caramel-macchiato.jpg",
+  "cold brew": "/images/cold-brew.jpg",
+  "iced mocha": "/images/iced-mocha.jpg",
+  "velvet latte": "/images/velvet-latte.jpg",
+};
 
 const ORDER_STATUSES = [
   { value: "PLACED", label: "Placed" },
@@ -17,6 +26,40 @@ const ORDER_STATUSES = [
   { value: "OUT_FOR_DELIVERY", label: "Out for Delivery" },
   { value: "DELIVERED", label: "Delivered" },
 ];
+
+function getCoffeeImage(item) {
+  if (item.imageSrc) {
+    return item.imageSrc;
+  }
+
+  const productName = (item.name || "").trim().toLowerCase();
+
+  return COFFEE_IMAGES[productName] || "";
+}
+
+// Product image with a fallback if the file is missing.
+function AdminCoffeeImage({ item }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = getCoffeeImage(item);
+
+  return (
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#E8D8C5]">
+      {imageSrc && !imageFailed ? (
+        <img
+          src={imageSrc}
+          alt={item.name || "Coffee"}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[#6B4226]">
+          <Coffee size={22} strokeWidth={1.4} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AdminOrders() {
   const navigate = useNavigate();
@@ -66,9 +109,7 @@ function AdminOrders() {
       }
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to load orders (${response.status}).`
-        );
+        throw new Error(`Failed to load orders (${response.status}).`);
       }
 
       const data = await response.json();
@@ -81,6 +122,7 @@ function AdminOrders() {
     } catch (err) {
       if (err.name !== "AbortError") {
         console.error("Orders loading error:", err);
+
         setError(
           "Unable to load orders. Check the backend connection and try again."
         );
@@ -120,8 +162,7 @@ function AdminOrders() {
         return;
       }
 
-      const contentType =
-        response.headers.get("content-type") || "";
+      const contentType = response.headers.get("content-type") || "";
 
       const result = contentType.includes("application/json")
         ? await response.json()
@@ -129,14 +170,13 @@ function AdminOrders() {
 
       if (!response.ok) {
         throw new Error(
-          result.error ||
-            `Status update failed (${response.status}).`
+          result.error || `Status update failed (${response.status}).`
         );
       }
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
-          order.id === orderId ? result : order
+          String(order.id) === String(orderId) ? result : order
         )
       );
 
@@ -147,8 +187,7 @@ function AdminOrders() {
       console.error("Status update failed:", err);
 
       setStatusError(
-        err.message ||
-          "Unable to update order status. Please try again."
+        err.message || "Unable to update order status. Please try again."
       );
     } finally {
       setUpdatingOrderId(null);
@@ -176,7 +215,7 @@ function AdminOrders() {
   return (
     <main className="min-h-screen bg-[#F3E9DC] px-5 py-12 text-[#24150F] sm:px-8">
       <div className="mx-auto max-w-7xl">
-        {/* Page Heading */}
+        {/* Page heading */}
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#A66A3F]">
@@ -214,7 +253,7 @@ function AdminOrders() {
           </div>
         </div>
 
-        {/* Status Messages */}
+        {/* Status messages */}
         {statusError && (
           <p
             role="alert"
@@ -233,13 +272,11 @@ function AdminOrders() {
           </p>
         )}
 
-        {/* Summary Cards */}
+        {/* Summary cards */}
         {!loading && !error && (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-[#D8C7B5] bg-[#FAF7F2] p-6">
-              <p className="text-sm text-[#806A5A]">
-                Total Orders
-              </p>
+              <p className="text-sm text-[#806A5A]">Total Orders</p>
 
               <p className="mt-2 text-3xl font-semibold">
                 {orders.length}
@@ -247,9 +284,7 @@ function AdminOrders() {
             </div>
 
             <div className="rounded-2xl border border-[#D8C7B5] bg-[#FAF7F2] p-6">
-              <p className="text-sm text-[#806A5A]">
-                Combined Order Value
-              </p>
+              <p className="text-sm text-[#806A5A]">Combined Order Value</p>
 
               <p className="mt-2 text-3xl font-semibold">
                 {formatPrice(totalRevenue)}
@@ -295,12 +330,10 @@ function AdminOrders() {
                 key={order.id}
                 className="overflow-hidden rounded-3xl border border-[#D8C7B5] bg-[#FAF7F2]"
               >
-                {/* Order Header and Status */}
+                {/* Order header and status */}
                 <div className="flex flex-col justify-between gap-4 bg-[#24150F] px-6 py-5 text-[#F3E9DC] sm:flex-row sm:items-center">
                   <div>
-                    <p className="text-xs text-[#CDB8A3]">
-                      Order ID
-                    </p>
+                    <p className="text-xs text-[#CDB8A3]">Order ID</p>
 
                     <h2 className="mt-1 break-all text-lg font-semibold">
                       {order.id}
@@ -325,10 +358,7 @@ function AdminOrders() {
                       id={`status-${order.id}`}
                       value={order.status || "PLACED"}
                       onChange={(event) =>
-                        updateOrderStatus(
-                          order.id,
-                          event.target.value
-                        )
+                        updateOrderStatus(order.id, event.target.value)
                       }
                       disabled={updatingOrderId === order.id}
                       className="w-full max-w-[230px] rounded-full border border-white/20 bg-[#24150F] px-4 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#D9B68C] disabled:cursor-wait disabled:opacity-60"
@@ -352,12 +382,10 @@ function AdminOrders() {
                   </div>
                 </div>
 
-                {/* Customer Details and Items */}
+                {/* Customer details and ordered coffees */}
                 <div className="grid gap-6 p-6 lg:grid-cols-2">
                   <section>
-                    <h3 className="font-semibold">
-                      Customer Details
-                    </h3>
+                    <h3 className="font-semibold">Customer Details</h3>
 
                     <p className="mt-3 text-sm">
                       {[order.firstName, order.lastName]
@@ -375,29 +403,24 @@ function AdminOrders() {
                   </section>
 
                   <section>
-                    <h3 className="font-semibold">
-                      Ordered Coffees
-                    </h3>
+                    <h3 className="font-semibold">Ordered Coffees</h3>
 
-                    <div className="mt-3 space-y-3">
+                    <div className="mt-4 space-y-3">
                       {(order.items || []).map((item, index) => (
                         <div
                           key={`${item.productId || item.name}-${index}`}
                           className="flex items-center justify-between gap-4 rounded-xl bg-[#F3E9DC] p-3"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <Coffee
-                              size={19}
-                              className="shrink-0 text-[#6B4226]"
-                            />
+                            <AdminCoffeeImage item={item} />
 
-                            <div>
-                              <p className="text-sm font-medium">
-                                {item.name}
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-medium">
+                                {item.name || "Coffee"}
                               </p>
 
                               <p className="mt-1 text-xs text-[#806A5A]">
-                                Qty: {item.quantity}
+                                Quantity: {item.quantity}
                               </p>
                             </div>
                           </div>
@@ -414,31 +437,24 @@ function AdminOrders() {
                   </section>
                 </div>
 
-                {/* Order Totals */}
+                {/* Order totals */}
                 <div className="border-t border-[#D8C7B5] px-6 py-5">
                   <div className="ml-auto max-w-sm space-y-2 text-sm">
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#806A5A]">
-                        Subtotal
-                      </span>
+                      <span className="text-[#806A5A]">Subtotal</span>
 
-                      <span>
-                        {formatPrice(order.subtotal)}
-                      </span>
+                      <span>{formatPrice(order.subtotal)}</span>
                     </div>
 
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#806A5A]">
-                        Delivery Fee
-                      </span>
+                      <span className="text-[#806A5A]">Delivery Fee</span>
 
-                      <span>
-                        {formatPrice(order.deliveryFee)}
-                      </span>
+                      <span>{formatPrice(order.deliveryFee)}</span>
                     </div>
 
                     <div className="flex justify-between gap-4 border-t border-[#D8C7B5] pt-3 text-base font-semibold">
                       <span>Total</span>
+
                       <span>{formatPrice(order.total)}</span>
                     </div>
                   </div>
@@ -450,10 +466,6 @@ function AdminOrders() {
       </div>
     </main>
   );
-}
-
-function cartCountText(count) {
-  return `${count} ${count === 1 ? "item" : "items"} in your bag`;
 }
 
 export default AdminOrders;
