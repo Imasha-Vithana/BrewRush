@@ -2,109 +2,45 @@ package com.brewrush.backend.config;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
-        @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174}")
-    private String allowedOrigins;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                // Only authenticated admins can manage orders
-                .requestMatchers(HttpMethod.GET, "/api/orders")
-                    .hasRole("ADMIN")
-
-                .requestMatchers(
-                    HttpMethod.PATCH,
-                    "/api/orders/*/status"
-                ).hasRole("ADMIN")
-
-                // Customer-facing APIs remain public
-                .requestMatchers("/api/products/**").permitAll()
-                .requestMatchers(
-                    HttpMethod.POST,
-                    "/api/orders"
-                ).permitAll()
-
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/orders/*/track"
-                ).permitAll()
-
-                .anyRequest().permitAll()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .formLogin(form -> form.disable());
+                .requestMatchers("/**").permitAll()
+            );
 
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService(
-            PasswordEncoder passwordEncoder,
-            @Value("${brewrush.admin.username}") String username,
-            @Value("${brewrush.admin.password}") String password) {
-
-        var admin = User.withUsername(username)
-            .password(passwordEncoder.encode(password))
-            .roles("ADMIN")
-            .build();
-
-        return new InMemoryUserDetailsManager(admin);
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(
+            "https://extraordinary-appreciation-production-c432.up.railway.app",
+            "http://localhost:5173",
+            "http://localhost:3000"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
 
-        config.setAllowedOrigins(
-    java.util.Arrays.stream(allowedOrigins.split(","))
-        .map(String::trim)
-        .filter(origin -> !origin.isEmpty())
-        .toList()
-        );
-
-        config.setAllowedMethods(
-            List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
-        );
-
-        config.setAllowedHeaders(
-            List.of("Authorization", "Content-Type")
-        );
-
-        UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration("/**", config);
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
